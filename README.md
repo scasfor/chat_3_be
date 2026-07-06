@@ -28,6 +28,27 @@ COI-Bot Admin is a Next.js (App Router) application designed to manage the confi
 
 ---
 
+## Folder Structure
+
+A high-level overview of the project's folder structure:
+
+```text
+├── app/                  # Next.js App Router (Pages, API routes, Layouts)
+│   ├── admin/            # Refine admin dashboard pages
+│   ├── api/              # Backend API routes (e.g., auth, chatbot endpoints)
+│   └── generated/        # Generated code (e.g., Prisma Client)
+├── lib/                  # Shared utilities and configuration
+├── prisma/               # Database schema (`schema.prisma`), migrations, and seed scripts
+├── public/               # Static assets (images, fonts, etc.)
+├── scripts/              # Custom scripts (e.g., legacy data migration)
+├── test/                 # Test files and Vitest configuration
+├── types/                # TypeScript type definitions
+├── auth.ts               # NextAuth configuration
+└── ...
+```
+
+---
+
 ## Local Development Setup
 
 ### Prerequisites
@@ -80,54 +101,55 @@ Access the admin panel at [http://localhost:3000](http://localhost:3000). Log in
 
 ---
 
-## Legacy Data Migration
+## Deployment Steps
 
-If you are migrating from the old Laravel-based COI-Bot application, the project includes a script to migrate data natively.
+If you prefer to host the application directly on a server (e.g., using PM2 and Nginx) without Docker, follow these steps:
 
-1. Ensure the `LEGACY_DB_*` variables in `.env` are pointing to the old Laravel MySQL database.
-2. Ensure `DATABASE_URL` points to the new database.
-3. Run the migration script:
-   ```bash
-   npm run migrate:legacy-data
-   ```
+### 1. Prepare the Environment
+Ensure Node.js (v22+) and your preferred database (MySQL/MariaDB) are installed on your server.
 
----
-
-## Deployment Steps (Docker)
-
-The recommended way to deploy the COI-Bot Admin in production is via Docker and Docker Compose. A `Dockerfile` and `docker-compose.yml` are provided in the repository.
-
-### 1. Prepare the Host
-Ensure Docker and Docker Compose are installed on your production server.
-
-### 2. Configure Environment
-Clone the repository to your server and set up the production environment variables:
-
+### 2. Clone and Install
+Clone the repository and install dependencies:
 ```bash
-cp .env.docker.example .env
+git clone <your-repo-url>
+cd nextjs-app
+npm install
 ```
 
-Ensure you update the `.env` file with secure values:
-- `AUTH_SECRET`: Random 32-byte base64 string.
-- `APP_ENCRYPTION_KEY`: Random 32-byte base64 string.
-- `DB_ROOT_PASSWORD`, `DB_PASSWORD`: Secure passwords for the MySQL container.
-- `NEXTAUTH_URL`: The public URL of your admin panel (e.g., `https://admin.coi-bot.com`).
-- `CHATBOT_CORS_ORIGINS`: Comma-separated list of domains where the frontend widget is hosted (e.g., `https://my-website.com`).
-
-### 3. Start the Containers
-Use Docker Compose to build the Next.js app and start both the `web` and `mysql` services:
-
+### 3. Environment Variables
+Create your production `.env` file based on `.env.example`:
 ```bash
-docker-compose up -d --build
+cp .env.example .env
+```
+Update `.env` with your production database credentials (`DATABASE_URL`), a strong `AUTH_SECRET`, and `APP_ENCRYPTION_KEY`. Ensure `NEXTAUTH_URL` is set to your production domain.
+
+### 4. Database Migrations & Prisma Client
+Run Prisma migrations to update your production database and generate the Prisma client:
+```bash
+npm run db:migrate:deploy
+npm run db:generate
+```
+*(If this is the first time deploying, you may also want to run `npm run db:seed` to create the initial admin user).*
+
+### 5. Build the Application
+Build the Next.js app for production:
+```bash
+npm run build
 ```
 
-### What Happens During Deployment?
-1. **Build Phase (`Dockerfile`)**: Docker installs dependencies, generates the Prisma client, and builds the Next.js standalone application.
-2. **Database Initialization**: The `mysql` container starts up using the credentials provided in the `.env` file. A health check ensures it is ready before the web container boots.
-3. **Container Startup (`docker-entrypoint.sh`)**: Before the Node.js server starts, the entrypoint script automatically runs `npx prisma migrate deploy` to ensure the production database schema is up to date.
-4. **App Start**: The Next.js production server starts on port `3000`.
+### 6. Start the Server with PM2
+Install PM2 globally if you haven't already:
+```bash
+npm install -g pm2
+```
+Start the application using PM2 to keep it running in the background:
+```bash
+pm2 start npm --name "coi-bot-admin" -- run start
+pm2 save
+pm2 startup
+```
 
-### 4. Reverse Proxy Setup (Optional but Recommended)
+### 7. Reverse Proxy Setup (Optional but Recommended)
 In production, you should run the application behind a reverse proxy like Nginx or Caddy to handle SSL/TLS termination. 
 
 **Example Nginx Configuration:**
@@ -146,10 +168,3 @@ server {
     }
 }
 ```
-
-### Updating the Application
-When pushing new changes to the server, rebuild and restart the containers:
-```bash
-docker-compose up -d --build
-```
-Database migrations will be applied automatically upon container restart.
