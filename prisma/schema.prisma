@@ -1,0 +1,191 @@
+// Prisma schema for the COI chatbot admin + backend.
+// Mirrors the original Laravel migrations 1:1 (see database/migrations in the
+// legacy bot-admin repo) so that data can be migrated without lossy transforms.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+// ---------------------------------------------------------------------------
+// Admin users
+// ---------------------------------------------------------------------------
+
+model User {
+  id              Int       @id @default(autoincrement())
+  name            String
+  email           String    @unique
+  emailVerifiedAt DateTime? @map("email_verified_at")
+  password        String
+  rememberToken   String?   @map("remember_token")
+  /// Gap-fill: basic active/inactive flag for admin user management.
+  isActive        Boolean   @default(true) @map("is_active")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+// ---------------------------------------------------------------------------
+// Chatbot content: categories, intents, phrases, keywords, follow-ups
+// ---------------------------------------------------------------------------
+
+model Category {
+  id        Int             @id @default(autoincrement())
+  name      String
+  sortOrder Int             @default(0) @map("sort_order")
+  status    Int             @default(1) // 1 active, 0 inactive
+  createdAt DateTime        @default(now()) @map("created_at")
+  updatedAt DateTime        @updatedAt @map("updated_at")
+  topics    CategoryTopic[]
+  intents   Intent[]
+
+  @@map("categories")
+}
+
+model CategoryTopic {
+  id         Int      @id @default(autoincrement())
+  categoryId Int      @map("category_id")
+  topic      String
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([categoryId])
+  @@map("category_topics")
+}
+
+model Intent {
+  id                       Int       @id @default(autoincrement())
+  categoryId               Int       @map("category_id")
+  intentKey                String    @unique @map("intent_key")
+  title                    String
+  normalizedTitle          String?   @map("normalized_title")
+  response                 String    @db.LongText
+  priority                 Int       @default(1)
+  isActive                 Boolean   @default(true) @map("is_active")
+  resourceLink             String?   @map("resource_link")
+  source                   String?
+  referenceInOriginalFile  String?   @map("reference_in_original_file")
+  createdAt                DateTime  @default(now()) @map("created_at")
+  updatedAt                DateTime  @updatedAt @map("updated_at")
+
+  category      Category        @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  phrases       IntentPhrase[]
+  keywords      IntentKeyword[]
+  conversations Conversation[]
+
+  // Self-referencing many-to-many via explicit join model (mirrors Laravel's
+  // follow_up_intents pivot table exactly).
+  followUpOf   FollowUpIntent[] @relation("FollowUpIntent_Intent")
+  followedByOf FollowUpIntent[] @relation("FollowUpIntent_FollowUpIntent")
+
+  @@index([normalizedTitle])
+  @@map("intents")
+}
+
+model IntentPhrase {
+  id                Int      @id @default(autoincrement())
+  intentId          Int      @map("intent_id")
+  phrase            String   @db.Text
+  normalizedPhrase  String?  @map("normalized_phrase")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  intent            Intent   @relation(fields: [intentId], references: [id], onDelete: Cascade)
+
+  @@index([intentId])
+  @@index([normalizedPhrase])
+  @@map("intent_phrases")
+}
+
+model IntentKeyword {
+  id        Int      @id @default(autoincrement())
+  intentId  Int      @map("intent_id")
+  keyword   String
+  weight    Int      @default(1)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  intent    Intent   @relation(fields: [intentId], references: [id], onDelete: Cascade)
+
+  @@index([intentId])
+  @@map("intent_keywords")
+}
+
+model FollowUpIntent {
+  id               Int      @id @default(autoincrement())
+  intentId         Int      @map("intent_id")
+  followUpIntentId Int      @map("follow_up_intent_id")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  intent         Intent @relation("FollowUpIntent_Intent", fields: [intentId], references: [id], onDelete: Cascade)
+  followUpIntent Intent @relation("FollowUpIntent_FollowUpIntent", fields: [followUpIntentId], references: [id], onDelete: Cascade)
+
+  @@index([intentId])
+  @@index([followUpIntentId])
+  @@map("follow_up_intents")
+}
+
+// ---------------------------------------------------------------------------
+// Synonyms (gap-fill: now has an admin UI, table already existed)
+// ---------------------------------------------------------------------------
+
+model Synonym {
+  id        Int      @id @default(autoincrement())
+  word      String
+  synonym   String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([word])
+  @@index([synonym])
+  @@map("synonyms")
+}
+
+// ---------------------------------------------------------------------------
+// Conversation logging & unmatched questions
+// ---------------------------------------------------------------------------
+
+model Conversation {
+  id                 Int      @id @default(autoincrement())
+  sessionId          String   @map("session_id")
+  userMessage        String   @map("user_message") @db.Text
+  normalizedMessage  String?  @map("normalized_message") @db.Text
+  intentId           Int?     @map("intent_id")
+  confidence         Decimal? @db.Decimal(5, 2)
+  botResponse        String?  @map("bot_response") @db.LongText
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  intent Intent? @relation(fields: [intentId], references: [id], onDelete: SetNull)
+
+  @@index([sessionId])
+  @@map("conversations")
+}
+
+model UnmatchedQuestion {
+  id        Int      @id @default(autoincrement())
+  question  String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("unmatched_questions")
+}
+
+// ---------------------------------------------------------------------------
+// Key/value settings (Gemini API key etc, value stored app-level encrypted)
+// ---------------------------------------------------------------------------
+
+model Setting {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  value     String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("settings")
+}
