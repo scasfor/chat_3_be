@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { DeleteButton, List, useSelect, useTable } from "@refinedev/antd";
-import { useInvalidate } from "@refinedev/core";
+import { useInvalidate, useTranslate } from "@refinedev/core";
 import { App, Badge, Button, Form, Modal, Select, Space, Table, Typography } from "antd";
 import { LinkOutlined } from "@ant-design/icons";
+import { DATE_LOCALE } from "@/lib/i18n";
+import { useIsClient } from "@/lib/hooks/useIsClient";
 
 type UnmatchedQuestionRow = {
   id: number;
@@ -13,6 +15,8 @@ type UnmatchedQuestionRow = {
 };
 
 export default function UnmatchedQuestionsPage() {
+  const translate = useTranslate();
+  const isClient = useIsClient();
   const { message } = App.useApp();
   const invalidate = useInvalidate();
   const refresh = () => invalidate({ resource: "unmatched-questions", invalidates: ["list"] });
@@ -44,14 +48,14 @@ export default function UnmatchedQuestionsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ intentId: values.intentId }),
       });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.message ?? "Request failed");
+      if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.message ?? translate("common.requestFailed"));
       const body = await res.json();
-      message.success(`Matched: phrase added to "${body.intentTitle}".`);
+      message.success(translate("unmatched.matchedSuccess", { intentTitle: body.intentTitle }));
       setMatchTarget(null);
       form.resetFields();
       refresh();
     } catch (error) {
-      message.error(error instanceof Error ? error.message : "Failed to match question.");
+      message.error(error instanceof Error ? error.message : translate("unmatched.matchFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -61,25 +65,25 @@ export default function UnmatchedQuestionsPage() {
     <List
       title={
         <Space>
-          Unmatched Questions
+          {translate("unmatched.title")}
           {typeof total === "number" && total > 0 ? <Badge count={total} /> : null}
         </Space>
       }
     >
       <Table {...tableProps} rowKey="id">
-        <Table.Column title="Question" dataIndex="question" />
+        <Table.Column title={translate("common.question")} dataIndex="question" />
         <Table.Column<UnmatchedQuestionRow>
-          title="Reported At"
+          title={translate("unmatched.reportedAt")}
           dataIndex="createdAt"
-          render={(value: string) => new Date(value).toLocaleString()}
+          render={(value: string) => new Date(value).toLocaleString(DATE_LOCALE)}
         />
         <Table.Column<UnmatchedQuestionRow>
-          title="Actions"
+          title={translate("common.actions")}
           width={220}
           render={(_, record) => (
             <Space>
               <Button size="small" icon={<LinkOutlined />} onClick={() => setMatchTarget(record)}>
-                Match to Intent
+                {translate("unmatched.matchToIntent")}
               </Button>
               <DeleteButton size="small" hideText recordItemId={record.id} resource="unmatched-questions" />
             </Space>
@@ -87,23 +91,25 @@ export default function UnmatchedQuestionsPage() {
         />
       </Table>
 
+      {isClient ? (
       <Modal
         forceRender
-        title="Match to Existing Intent"
+        title={translate("unmatched.matchModalTitle")}
         open={matchTarget !== null}
         onCancel={() => setMatchTarget(null)}
         onOk={submitMatch}
         confirmLoading={submitting}
       >
         <Typography.Paragraph>
-          <strong>Question:</strong> {matchTarget?.question}
+          <strong>{translate("common.question")}:</strong> {matchTarget?.question}
         </Typography.Paragraph>
         <Form form={form} layout="vertical">
-          <Form.Item label="Intent" name="intentId" rules={[{ required: true }]}>
+          <Form.Item label={translate("common.intent")} name="intentId" rules={[{ required: true }]}>
             <Select {...intentSelectProps} showSearch />
           </Form.Item>
         </Form>
       </Modal>
+      ) : null}
     </List>
   );
 }

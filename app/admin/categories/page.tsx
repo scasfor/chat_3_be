@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTable, useModalForm, List, CreateButton, EditButton, DeleteButton } from "@refinedev/antd";
-import { useInvalidate, useCustomMutation } from "@refinedev/core";
+import { useInvalidate, useCustomMutation, useTranslate } from "@refinedev/core";
 import { Table, Modal, Form, Input, Select, Space, Tag, Button, Switch } from "antd";
 import { ArrowDownOutlined, ArrowUpOutlined } from "@ant-design/icons";
 
@@ -16,7 +16,11 @@ type CategoryRow = {
   intentsCount: number;
 };
 
+import { useIsClient } from "@/lib/hooks/useIsClient";
+
 export default function CategoriesPage() {
+  const translate = useTranslate();
+  const isClient = useIsClient();
   const invalidate = useInvalidate();
   const { mutate: customMutate } = useCustomMutation();
   const [reordering, setReordering] = useState(false);
@@ -41,6 +45,11 @@ export default function CategoriesPage() {
     action: "edit",
     onMutationSuccess: () => invalidate({ resource: "categories", invalidates: ["list"] }),
   });
+
+  const statusOptions = [
+    { label: translate("common.active"), value: 1 },
+    { label: translate("common.inactive"), value: 0 },
+  ];
 
   const toggleStatus = (id: number) => {
     customMutate(
@@ -72,10 +81,13 @@ export default function CategoriesPage() {
   };
 
   return (
-    <List title="Categories" headerButtons={<CreateButton onClick={() => show()}>Create</CreateButton>}>
+    <List
+      title={translate("categories.title")}
+      headerButtons={<CreateButton onClick={() => show()}>{translate("buttons.create")}</CreateButton>}
+    >
       <Table {...tableProps} rowKey="id" loading={tableProps.loading || reordering} pagination={false}>
         <Table.Column<CategoryRow>
-          title="Order"
+          title={translate("categories.order")}
           width={100}
           render={(_, record) => (
             <Space>
@@ -84,9 +96,9 @@ export default function CategoriesPage() {
             </Space>
           )}
         />
-        <Table.Column title="Name" dataIndex="name" />
+        <Table.Column title={translate("common.name")} dataIndex="name" />
         <Table.Column<CategoryRow>
-          title="Topics"
+          title={translate("categories.topics")}
           dataIndex="topics"
           render={(topics: string[]) => (
             <Space wrap>
@@ -96,21 +108,21 @@ export default function CategoriesPage() {
             </Space>
           )}
         />
-        <Table.Column title="Intents" dataIndex="intentsCount" />
+        <Table.Column title={translate("categories.intents")} dataIndex="intentsCount" />
         <Table.Column<CategoryRow>
-          title="Status"
+          title={translate("common.status")}
           dataIndex="status"
           render={(status: number, record) => (
             <Switch
               checked={!!status}
-              checkedChildren="Active"
-              unCheckedChildren="Inactive"
+              checkedChildren={translate("common.active")}
+              unCheckedChildren={translate("common.inactive")}
               onChange={() => toggleStatus(record.id)}
             />
           )}
         />
         <Table.Column<CategoryRow>
-          title="Actions"
+          title={translate("common.actions")}
           render={(_, record) => (
             <Space>
               <EditButton size="small" hideText recordItemId={record.id} onClick={() => showEdit(record.id)} />
@@ -120,43 +132,37 @@ export default function CategoriesPage() {
         />
       </Table>
 
-      <Modal {...modalProps} forceRender title="Create Category">
+      {isClient ? (
+        <>
+      <Modal {...modalProps} forceRender title={translate("categories.create")}>
         <Form {...formProps} layout="vertical">
-          <Form.Item label="Name" name="name" rules={[{ required: true }]}>
+          <Form.Item label={translate("common.name")} name="name" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-          <Form.Item label="Status" name="status" initialValue={1}>
-            <Select
-              options={[
-                { label: "Active", value: 1 },
-                { label: "Inactive", value: 0 },
-              ]}
-            />
+          <Form.Item label={translate("common.status")} name="status" initialValue={1}>
+            <Select options={statusOptions} />
           </Form.Item>
-          <Form.Item label="Topics" name="topics">
-            <Select mode="tags" placeholder="Add a topic and press enter" />
+          <Form.Item label={translate("categories.topics")} name="topics">
+            <Select mode="tags" placeholder={translate("categories.topicsPlaceholder")} />
           </Form.Item>
         </Form>
       </Modal>
 
-      <Modal {...editModalProps} forceRender title="Edit Category" confirmLoading={formLoading}>
+      <Modal {...editModalProps} forceRender title={translate("categories.edit")} confirmLoading={formLoading}>
         <Form {...editFormProps} layout="vertical">
-          <Form.Item label="Name" name="name" rules={[{ required: true }]}>
+          <Form.Item label={translate("common.name")} name="name" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-          <Form.Item label="Status" name="status">
-            <Select
-              options={[
-                { label: "Active", value: 1 },
-                { label: "Inactive", value: 0 },
-              ]}
-            />
+          <Form.Item label={translate("common.status")} name="status">
+            <Select options={statusOptions} />
           </Form.Item>
-          <Form.Item label="Topics" name="topics">
-            <Select mode="tags" placeholder="Add a topic and press enter" />
+          <Form.Item label={translate("categories.topics")} name="topics">
+            <Select mode="tags" placeholder={translate("categories.topicsPlaceholder")} />
           </Form.Item>
         </Form>
       </Modal>
+        </>
+      ) : null}
     </List>
   );
 }

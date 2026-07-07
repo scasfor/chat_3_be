@@ -1,7 +1,9 @@
 "use client";
 
 import { DeleteButton, List, useTable } from "@refinedev/antd";
+import { useTranslate } from "@refinedev/core";
 import { Input, Space, Table, Tag, Typography } from "antd";
+import { DATE_LOCALE } from "@/lib/i18n";
 
 type ConversationRow = {
   id: number;
@@ -15,16 +17,18 @@ type ConversationRow = {
 };
 
 export default function ConversationsPage() {
+  const translate = useTranslate();
+
   const { tableProps, setFilters } = useTable<ConversationRow>({
     resource: "conversations",
     sorters: { initial: [{ field: "createdAt", order: "desc" }] },
   });
 
   return (
-    <List title="Conversation Log">
+    <List title={translate("conversations.title")}>
       <Space style={{ marginBottom: 16 }}>
         <Input.Search
-          placeholder="Search by message content"
+          placeholder={translate("conversations.searchPlaceholder")}
           allowClear
           style={{ width: 320 }}
           onSearch={(value) =>
@@ -32,43 +36,50 @@ export default function ConversationsPage() {
           }
         />
       </Space>
-      <Table {...tableProps} rowKey="id" expandable={{
-        expandedRowRender: (record) => (
-          <Typography.Paragraph style={{ whiteSpace: "pre-wrap", margin: 0 }}>
-            <strong>Bot response:</strong> {record.botResponse ?? <em>none (fallback/clarification)</em>}
-          </Typography.Paragraph>
-        ),
-      }}>
+      <Table
+        {...tableProps}
+        rowKey="id"
+        expandable={{
+          expandedRowRender: (record) => (
+            <Typography.Paragraph style={{ whiteSpace: "pre-wrap", margin: 0 }}>
+              <strong>{translate("conversations.botResponse")}</strong>{" "}
+              {record.botResponse ?? <em>{translate("conversations.noResponse")}</em>}
+            </Typography.Paragraph>
+          ),
+        }}
+      >
         <Table.Column<ConversationRow>
-          title="Session"
+          title={translate("conversations.session")}
           dataIndex="sessionId"
           width={160}
           render={(value: string) => <code style={{ fontSize: 12 }}>{value.slice(0, 8)}…</code>}
         />
-        <Table.Column title="Message" dataIndex="userMessage" />
+        <Table.Column title={translate("conversations.message")} dataIndex="userMessage" />
         <Table.Column<ConversationRow>
-          title="Matched Intent"
+          title={translate("conversations.matchedIntent")}
           dataIndex="intentTitle"
-          render={(value: string | null, record) =>
-            value ? <Tag color="blue">{value}</Tag> : <Tag color="red">unmatched</Tag>
+          render={(value: string | null) =>
+            value ? <Tag color="blue">{value}</Tag> : <Tag color="red">{translate("common.unmatched")}</Tag>
           }
         />
         <Table.Column<ConversationRow>
-          title="Confidence"
+          title={translate("conversations.confidence")}
           dataIndex="confidence"
           width={110}
           render={(value: string | number | null) => (value !== null ? `${Number(value).toFixed(0)}%` : "—")}
         />
         <Table.Column<ConversationRow>
-          title="At"
+          title={translate("conversations.at")}
           dataIndex="createdAt"
           width={180}
-          render={(value: string) => new Date(value).toLocaleString()}
+          render={(value: string) => new Date(value).toLocaleString(DATE_LOCALE)}
         />
         <Table.Column<ConversationRow>
-          title="Actions"
+          title={translate("common.actions")}
           width={100}
-          render={(_, record) => <DeleteButton size="small" hideText recordItemId={record.id} resource="conversations" />}
+          render={(_, record) => (
+            <DeleteButton size="small" hideText recordItemId={record.id} resource="conversations" />
+          )}
         />
       </Table>
     </List>

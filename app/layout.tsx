@@ -4,7 +4,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "COI Bot Admin",
-  description: "Admin panel and chatbot backend for the COI chatbot.",
+  description: "Panel de administración y backend del chatbot COI.",
 };
 
 export default function RootLayout({
@@ -13,7 +13,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="es">
       <body>
         <AppAntdRegistry>{children}</AppAntdRegistry>
       </body>

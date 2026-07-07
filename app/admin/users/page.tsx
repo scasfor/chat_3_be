@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { CreateButton, DeleteButton, List, useModalForm, useTable } from "@refinedev/antd";
-import { useInvalidate } from "@refinedev/core";
+import { useInvalidate, useTranslate } from "@refinedev/core";
 import { App, Button, Form, Input, Modal, Space, Switch, Table } from "antd";
 import { KeyOutlined } from "@ant-design/icons";
+import { DATE_LOCALE } from "@/lib/i18n";
+import { useIsClient } from "@/lib/hooks/useIsClient";
 
 type UserRow = {
   id: number;
@@ -15,6 +17,8 @@ type UserRow = {
 };
 
 export default function UsersPage() {
+  const translate = useTranslate();
+  const isClient = useIsClient();
   const { message } = App.useApp();
   const invalidate = useInvalidate();
   const refresh = () => invalidate({ resource: "users", invalidates: ["list"] });
@@ -33,7 +37,7 @@ export default function UsersPage() {
   const toggleActive = async (record: UserRow) => {
     const res = await fetch(`/api/admin/users/${record.id}/toggle-active`, { method: "POST" });
     if (!res.ok) {
-      message.error("Failed to update user status.");
+      message.error(translate("users.toggleFailed"));
       return;
     }
     refresh();
@@ -52,41 +56,49 @@ export default function UsersPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password: values.password }),
       });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.message ?? "Request failed");
-      message.success("Password reset successfully.");
+      if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.message ?? translate("common.requestFailed"));
+      message.success(translate("users.resetSuccess"));
       setResetTarget(null);
       resetForm.resetFields();
     } catch (error) {
-      message.error(error instanceof Error ? error.message : "Failed to reset password.");
+      message.error(error instanceof Error ? error.message : translate("users.resetFailed"));
     } finally {
       setResetting(false);
     }
   };
 
   return (
-    <List title="Users" headerButtons={<CreateButton onClick={() => show()}>Create</CreateButton>}>
+    <List
+      title={translate("users.title")}
+      headerButtons={<CreateButton onClick={() => show()}>{translate("buttons.create")}</CreateButton>}
+    >
       <Table {...tableProps} rowKey="id">
-        <Table.Column title="Name" dataIndex="name" />
-        <Table.Column title="Email" dataIndex="email" />
+        <Table.Column title={translate("common.name")} dataIndex="name" />
+        <Table.Column title={translate("common.email")} dataIndex="email" />
         <Table.Column<UserRow>
-          title="Active"
+          title={translate("common.active")}
           dataIndex="isActive"
           render={(isActive: boolean, record) => (
-            <Switch checked={isActive} checkedChildren="Active" unCheckedChildren="Inactive" onChange={() => toggleActive(record)} />
+            <Switch
+              checked={isActive}
+              checkedChildren={translate("common.active")}
+              unCheckedChildren={translate("common.inactive")}
+              onChange={() => toggleActive(record)}
+            />
           )}
         />
         <Table.Column<UserRow>
-          title="Created"
+          title={translate("users.created")}
           dataIndex="createdAt"
-          render={(value: string) => new Date(value).toLocaleDateString()}
+          render={(value: string) => new Date(value).toLocaleDateString(DATE_LOCALE)}
         />
         <Table.Column<UserRow>
-          title="Actions"
+          title={translate("common.actions")}
           width={200}
           render={(_, record) => (
             <Space>
               <Button size="small" icon={<KeyOutlined />} onClick={() => setResetTarget(record)}>
-                Reset Password
+                {translate("users.resetPassword")}
               </Button>
               <DeleteButton size="small" hideText recordItemId={record.id} resource="users" />
             </Space>
@@ -94,15 +106,17 @@ export default function UsersPage() {
         />
       </Table>
 
-      <Modal {...modalProps} forceRender title="Create User">
+      {isClient ? (
+        <>
+      <Modal {...modalProps} forceRender title={translate("users.create")}>
         <Form {...formProps} layout="vertical">
-          <Form.Item label="Name" name="name" rules={[{ required: true }]}>
+          <Form.Item label={translate("common.name")} name="name" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-          <Form.Item label="Email" name="email" rules={[{ required: true, type: "email" }]}>
+          <Form.Item label={translate("common.email")} name="email" rules={[{ required: true, type: "email" }]}>
             <Input />
           </Form.Item>
-          <Form.Item label="Password" name="password" rules={[{ required: true, min: 8 }]}>
+          <Form.Item label={translate("common.password")} name="password" rules={[{ required: true, min: 8 }]}>
             <Input.Password />
           </Form.Item>
         </Form>
@@ -110,18 +124,20 @@ export default function UsersPage() {
 
       <Modal
         forceRender
-        title={`Reset Password: ${resetTarget?.name ?? ""}`}
+        title={translate("users.resetPasswordTitle", { name: resetTarget?.name ?? "" })}
         open={resetTarget !== null}
         onCancel={() => setResetTarget(null)}
         onOk={submitReset}
         confirmLoading={resetting}
       >
         <Form form={resetForm} layout="vertical">
-          <Form.Item label="New Password" name="password" rules={[{ required: true, min: 8 }]}>
+          <Form.Item label={translate("users.newPassword")} name="password" rules={[{ required: true, min: 8 }]}>
             <Input.Password />
           </Form.Item>
         </Form>
       </Modal>
+        </>
+      ) : null}
     </List>
   );
 }

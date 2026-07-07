@@ -1,5 +1,7 @@
 "use client";
 
+import { t } from "@/lib/i18n";
+
 import type { AuthProvider } from "@refinedev/core";
 import { getSession, signIn, signOut } from "next-auth/react";
 
@@ -22,7 +24,7 @@ export const authProvider: AuthProvider = {
         success: false,
         error: {
           name: "LoginError",
-          message: "Invalid email or password.",
+          message: t("auth.invalidCredentials"),
         },
       };
     }

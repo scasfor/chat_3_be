@@ -1,9 +1,11 @@
 "use client";
 
+import { useMemo } from "react";
 import { Refine } from "@refinedev/core";
 import routerProvider from "@refinedev/nextjs-router";
 import { ThemedLayout, useNotificationProvider } from "@refinedev/antd";
 import { ConfigProvider, App as AntdApp } from "antd";
+import esES from "antd/locale/es_ES";
 import { SessionProvider } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import {
@@ -19,25 +21,8 @@ import {
 import "@refinedev/antd/dist/reset.css";
 import { dataProvider } from "@/lib/refine/dataProvider";
 import { authProvider } from "@/lib/refine/authProvider";
-
-const resources = [
-  { name: "dashboard", list: "/admin", meta: { label: "Dashboard", icon: <DashboardOutlined /> } },
-  { name: "categories", list: "/admin/categories", meta: { label: "Categories", icon: <AppstoreOutlined /> } },
-  { name: "intents", list: "/admin/intents", meta: { label: "Intents", icon: <BulbOutlined /> } },
-  {
-    name: "unmatched-questions",
-    list: "/admin/unmatched-questions",
-    meta: { label: "Unmatched Questions", icon: <QuestionCircleOutlined /> },
-  },
-  { name: "synonyms", list: "/admin/synonyms", meta: { label: "Synonyms", icon: <TagsOutlined /> } },
-  {
-    name: "conversations",
-    list: "/admin/conversations",
-    meta: { label: "Conversation Log", icon: <MessageOutlined /> },
-  },
-  { name: "users", list: "/admin/users", meta: { label: "Users", icon: <TeamOutlined /> } },
-  { name: "settings", list: "/admin/settings", meta: { label: "Settings", icon: <SettingOutlined /> } },
-];
+import { i18nProvider, t } from "@/lib/i18n";
+import { AdminSider } from "./components/AdminSider";
 
 function Chrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -46,11 +31,57 @@ function Chrome({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  return <ThemedLayout>{children}</ThemedLayout>;
+  return <ThemedLayout Sider={AdminSider}>{children}</ThemedLayout>;
 }
 
 function RefineApp({ children }: { children: React.ReactNode }) {
   const notificationProvider = useNotificationProvider();
+
+  const resources = useMemo(
+    () => [
+      {
+        name: "dashboard",
+        list: "/admin",
+        meta: { label: t("nav.dashboard"), icon: <DashboardOutlined /> },
+      },
+      {
+        name: "categories",
+        list: "/admin/categories",
+        meta: { label: t("nav.categories"), icon: <AppstoreOutlined /> },
+      },
+      {
+        name: "intents",
+        list: "/admin/intents",
+        meta: { label: t("nav.intents"), icon: <BulbOutlined /> },
+      },
+      {
+        name: "unmatched-questions",
+        list: "/admin/unmatched-questions",
+        meta: { label: t("nav.unmatchedQuestions"), icon: <QuestionCircleOutlined /> },
+      },
+      {
+        name: "synonyms",
+        list: "/admin/synonyms",
+        meta: { label: t("nav.synonyms"), icon: <TagsOutlined /> },
+      },
+      {
+        name: "conversations",
+        list: "/admin/conversations",
+        meta: { label: t("nav.conversations"), icon: <MessageOutlined /> },
+      },
+      {
+        name: "users",
+        list: "/admin/users",
+        meta: { label: t("nav.users"), icon: <TeamOutlined /> },
+      },
+      {
+        name: "settings",
+        list: "/admin/settings",
+        meta: { label: t("nav.settings"), icon: <SettingOutlined /> },
+      },
+    ],
+    [],
+  );
 
   return (
     <Refine
@@ -58,12 +89,13 @@ function RefineApp({ children }: { children: React.ReactNode }) {
       dataProvider={dataProvider}
       authProvider={authProvider}
       notificationProvider={notificationProvider}
+      i18nProvider={i18nProvider}
       resources={resources}
       options={{
         syncWithLocation: true,
         warnWhenUnsavedChanges: true,
         disableTelemetry: true,
-        title: { text: "COI Bot Admin" },
+        title: { text: t("app.title") },
       }}
     >
       <Chrome>{children}</Chrome>
@@ -74,7 +106,7 @@ function RefineApp({ children }: { children: React.ReactNode }) {
 export function AdminProviders({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider basePath="/api/auth">
-      <ConfigProvider theme={{ token: { colorPrimary: "#f59e0b", borderRadius: 6 } }}>
+      <ConfigProvider locale={esES} theme={{ token: { colorPrimary: "#f59e0b", borderRadius: 6 } }}>
         <AntdApp>
           <RefineApp>{children}</RefineApp>
         </AntdApp>

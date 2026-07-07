@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslate } from "@refinedev/core";
 import { Card, Col, Row, Statistic, Table, Typography } from "antd";
 import {
   BulbOutlined,
@@ -10,6 +11,7 @@ import {
   TagOutlined,
 } from "@ant-design/icons";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { DATE_LOCALE } from "@/lib/i18n";
 
 type Stats = {
   totalIntents: number;
@@ -26,6 +28,7 @@ type ChartData = { labels: string[]; values: number[] };
 type UnmatchedRow = { id: number; question: string; createdAt: string };
 
 export default function DashboardPage() {
+  const translate = useTranslate();
   const [stats, setStats] = useState<Stats | null>(null);
   const [chart, setChart] = useState<ChartData | null>(null);
   const [unmatched, setUnmatched] = useState<UnmatchedRow[]>([]);
@@ -50,22 +53,32 @@ export default function DashboardPage() {
         <Col xs={24} sm={12} md={8} lg={4}>
           <Card>
             <Statistic
-              title="Total Intents"
+              title={translate("dashboard.totalIntents")}
               value={stats?.totalIntents ?? 0}
               prefix={<BulbOutlined />}
-              suffix={stats ? <Typography.Text type="secondary" style={{ fontSize: 12 }}>{stats.activeIntents} active</Typography.Text> : null}
+              suffix={
+                stats ? (
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    {translate("dashboard.activeCount", { count: stats.activeIntents })}
+                  </Typography.Text>
+                ) : null
+              }
             />
           </Card>
         </Col>
         <Col xs={24} sm={12} md={8} lg={4}>
           <Card>
-            <Statistic title="Conversations" value={stats?.conversations ?? 0} prefix={<MessageOutlined />} />
+            <Statistic
+              title={translate("dashboard.conversations")}
+              value={stats?.conversations ?? 0}
+              prefix={<MessageOutlined />}
+            />
           </Card>
         </Col>
         <Col xs={24} sm={12} md={8} lg={4}>
           <Card>
             <Statistic
-              title="Unmatched Questions"
+              title={translate("dashboard.unmatchedQuestions")}
               value={stats?.unmatchedQuestions ?? 0}
               prefix={<QuestionCircleOutlined />}
               valueStyle={{ color: (stats?.unmatchedQuestions ?? 0) > 0 ? "#cf1322" : undefined }}
@@ -74,22 +87,30 @@ export default function DashboardPage() {
         </Col>
         <Col xs={24} sm={12} md={8} lg={4}>
           <Card>
-            <Statistic title="Categories" value={stats?.categories ?? 0} prefix={<FolderOpenOutlined />} />
+            <Statistic
+              title={translate("dashboard.categories")}
+              value={stats?.categories ?? 0}
+              prefix={<FolderOpenOutlined />}
+            />
           </Card>
         </Col>
         <Col xs={24} sm={12} md={8} lg={4}>
           <Card>
-            <Statistic title="Training Phrases" value={stats?.phrases ?? 0} prefix={<MessageOutlined />} />
+            <Statistic
+              title={translate("dashboard.trainingPhrases")}
+              value={stats?.phrases ?? 0}
+              prefix={<MessageOutlined />}
+            />
           </Card>
         </Col>
         <Col xs={24} sm={12} md={8} lg={4}>
           <Card>
-            <Statistic title="Keywords" value={stats?.keywords ?? 0} prefix={<TagOutlined />} />
+            <Statistic title={translate("dashboard.keywords")} value={stats?.keywords ?? 0} prefix={<TagOutlined />} />
           </Card>
         </Col>
       </Row>
 
-      <Card title="Conversations - Last 30 Days" style={{ marginTop: 16 }}>
+      <Card title={translate("dashboard.conversationsChart")} style={{ marginTop: 16 }}>
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" />
@@ -101,18 +122,18 @@ export default function DashboardPage() {
         </ResponsiveContainer>
       </Card>
 
-      <Card title="Recent Unmatched Questions" style={{ marginTop: 16 }}>
+      <Card title={translate("dashboard.recentUnmatched")} style={{ marginTop: 16 }}>
         <Table
           dataSource={unmatched}
           rowKey="id"
           pagination={false}
           columns={[
-            { title: "Question", dataIndex: "question" },
+            { title: translate("common.question"), dataIndex: "question" },
             {
-              title: "Asked At",
+              title: translate("dashboard.askedAt"),
               dataIndex: "createdAt",
               width: 200,
-              render: (value: string) => new Date(value).toLocaleString(),
+              render: (value: string) => new Date(value).toLocaleString(DATE_LOCALE),
             },
           ]}
         />

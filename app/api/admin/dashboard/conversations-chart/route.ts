@@ -29,7 +29,7 @@ export const GET = withAdminAuth(async () => {
     const day = new Date(startOfToday);
     day.setDate(day.getDate() - i);
     const key = day.toISOString().slice(0, 10);
-    labels.push(day.toLocaleDateString("en-US", { month: "short", day: "2-digit" }));
+    labels.push(day.toLocaleDateString("es-ES", { month: "short", day: "2-digit" }));
     values.push(counts.get(key) ?? 0);
   }
 

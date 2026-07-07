@@ -1,12 +1,16 @@
 "use client";
 
 import { CreateButton, DeleteButton, EditButton, List, useModalForm, useTable } from "@refinedev/antd";
-import { useInvalidate } from "@refinedev/core";
+import { useInvalidate, useTranslate } from "@refinedev/core";
 import { Form, Input, Modal, Space, Table } from "antd";
 
 type SynonymRow = { id: number; word: string; synonym: string };
 
+import { useIsClient } from "@/lib/hooks/useIsClient";
+
 export default function SynonymsPage() {
+  const translate = useTranslate();
+  const isClient = useIsClient();
   const invalidate = useInvalidate();
   const refresh = () => invalidate({ resource: "synonyms", invalidates: ["list"] });
 
@@ -28,16 +32,16 @@ export default function SynonymsPage() {
   });
 
   return (
-    <List title="Synonyms" headerButtons={<CreateButton onClick={() => show()}>Create</CreateButton>}>
-      <p style={{ color: "#888", marginBottom: 16 }}>
-        When a user&apos;s message contains a word in the &quot;Synonym&quot; column, it is expanded to also match
-        the canonical &quot;Word&quot; for keyword scoring purposes.
-      </p>
+    <List
+      title={translate("synonyms.title")}
+      headerButtons={<CreateButton onClick={() => show()}>{translate("buttons.create")}</CreateButton>}
+    >
+      <p style={{ color: "#888", marginBottom: 16 }}>{translate("synonyms.help")}</p>
       <Table {...tableProps} rowKey="id">
-        <Table.Column title="Word" dataIndex="word" />
-        <Table.Column title="Synonym" dataIndex="synonym" />
+        <Table.Column title={translate("synonyms.word")} dataIndex="word" />
+        <Table.Column title={translate("synonyms.synonym")} dataIndex="synonym" />
         <Table.Column<SynonymRow>
-          title="Actions"
+          title={translate("common.actions")}
           width={140}
           render={(_, record) => (
             <Space>
@@ -48,27 +52,31 @@ export default function SynonymsPage() {
         />
       </Table>
 
-      <Modal {...modalProps} forceRender title="Create Synonym">
+      {isClient ? (
+        <>
+      <Modal {...modalProps} forceRender title={translate("synonyms.create")}>
         <Form {...formProps} layout="vertical">
-          <Form.Item label="Word" name="word" rules={[{ required: true }]}>
-            <Input placeholder="e.g. password" />
+          <Form.Item label={translate("synonyms.word")} name="word" rules={[{ required: true }]}>
+            <Input placeholder={translate("synonyms.wordPlaceholder")} />
           </Form.Item>
-          <Form.Item label="Synonym" name="synonym" rules={[{ required: true }]}>
-            <Input placeholder="e.g. contraseña" />
+          <Form.Item label={translate("synonyms.synonym")} name="synonym" rules={[{ required: true }]}>
+            <Input placeholder={translate("synonyms.synonymPlaceholder")} />
           </Form.Item>
         </Form>
       </Modal>
 
-      <Modal {...editModalProps} forceRender title="Edit Synonym">
+      <Modal {...editModalProps} forceRender title={translate("synonyms.edit")}>
         <Form {...editFormProps} layout="vertical">
-          <Form.Item label="Word" name="word" rules={[{ required: true }]}>
+          <Form.Item label={translate("synonyms.word")} name="word" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-          <Form.Item label="Synonym" name="synonym" rules={[{ required: true }]}>
+          <Form.Item label={translate("synonyms.synonym")} name="synonym" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
         </Form>
       </Modal>
+        </>
+      ) : null}
     </List>
   );
 }
