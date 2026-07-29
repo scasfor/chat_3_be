@@ -1,21 +1,25 @@
 services:
-  mysql:
-    image: mysql:8.4
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
     restart: unless-stopped
     environment:
-      MYSQL_DATABASE: ${DB_DATABASE:-coibot}
-      MYSQL_USER: ${DB_USERNAME:-coibot}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-coibot}
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-changeme}
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:-Your_strong_Password123}
+      MSSQL_PID: Developer
     volumes:
-      - mysql-data:/var/lib/mysql
+      - sqlserver-data:/var/opt/mssql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-changeme}"]
-      interval: 5s
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q \"SELECT 1\" || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q \"SELECT 1\" || exit 1",
+        ]
+      interval: 10s
       timeout: 5s
       retries: 20
+      start_period: 30s
     ports:
-      - "3306:3306"
+      - "1433:1433"
 
   web:
     build:
@@ -23,10 +27,13 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     depends_on:
-      mysql:
+      sqlserver:
         condition: service_healthy
     environment:
-      DATABASE_URL: mysql://${DB_USERNAME:-coibot}:${DB_PASSWORD:-coibot}@mysql:3306/${DB_DATABASE:-coibot}
+      # JDBC-style SQL Server URL for Prisma / @prisma/adapter-mssql.
+      # trustServerCertificate=true is appropriate for local Docker; for Azure SQL
+      # use encrypt=true and trustServerCertificate=false (or omit).
+      DATABASE_URL: sqlserver://sqlserver:1433;database=${DB_DATABASE:-coibot};user=sa;password=${MSSQL_SA_PASSWORD:-Your_strong_Password123};encrypt=true;trustServerCertificate=true
       AUTH_SECRET: ${AUTH_SECRET}
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY}
@@ -40,4 +47,4 @@ services:
       - "3000:3000"
 
 volumes:
-  mysql-data:
+  sqlserver-data:

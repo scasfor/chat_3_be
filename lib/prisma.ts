@@ -1,5 +1,5 @@
 import { PrismaClient } from "@/app/generated/prisma/client";
-import { PrismaMariaDb } from "@prisma/adapter-mariadb";
+import { PrismaMssql } from "@prisma/adapter-mssql";
 
 declare global {
   // eslint-disable-next-line no-var
@@ -13,7 +13,9 @@ function createPrismaClient(): PrismaClient {
     throw new Error("DATABASE_URL environment variable is not set.");
   }
 
-  const adapter = new PrismaMariaDb(connectionString);
+  // JDBC-style SQL Server URL, e.g.
+  // sqlserver://localhost:1433;database=coibot;user=sa;password=...;encrypt=true;trustServerCertificate=true
+  const adapter = new PrismaMssql(connectionString);
 
   return new PrismaClient({ adapter });
 }

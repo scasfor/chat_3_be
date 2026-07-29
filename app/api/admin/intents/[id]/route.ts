@@ -72,6 +72,16 @@ export const PATCH = withAdminAuth(async (request: NextRequest, context) => {
 
 export const DELETE = withAdminAuth(async (_request: NextRequest, context) => {
   const { id } = await context.params;
-  const intent = await prisma.intent.delete({ where: { id: Number(id) } });
+  const intentId = Number(id);
+
+  // SQL Server FollowUpIntent FKs use NoAction (no multi-path cascades), so
+  // clear both sides of the join before deleting the intent.
+  const intent = await prisma.$transaction(async (tx) => {
+    await tx.followUpIntent.deleteMany({
+      where: { OR: [{ intentId }, { followUpIntentId: intentId }] },
+    });
+    return tx.intent.delete({ where: { id: intentId } });
+  });
+
   return NextResponse.json(intent);
 });

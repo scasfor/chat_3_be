@@ -1,6 +1,7 @@
 // Prisma schema for the COI chatbot admin + backend.
 // Mirrors the original Laravel migrations 1:1 (see database/migrations in the
 // legacy bot-admin repo) so that data can be migrated without lossy transforms.
+// Target database: Microsoft SQL Server (Azure SQL or self-hosted).
 
 generator client {
   provider = "prisma-client"
@@ -8,7 +9,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "sqlserver"
 }
 
 // ---------------------------------------------------------------------------
@@ -65,7 +66,7 @@ model Intent {
   intentKey                String    @unique @map("intent_key")
   title                    String
   normalizedTitle          String?   @map("normalized_title")
-  response                 String    @db.LongText
+  response                 String    @db.NVarChar(Max)
   priority                 Int       @default(1)
   isActive                 Boolean   @default(true) @map("is_active")
   resourceLink             String?   @map("resource_link")
@@ -91,7 +92,7 @@ model Intent {
 model IntentPhrase {
   id                Int      @id @default(autoincrement())
   intentId          Int      @map("intent_id")
-  phrase            String   @db.Text
+  phrase            String   @db.NVarChar(Max)
   normalizedPhrase  String?  @map("normalized_phrase")
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
@@ -122,8 +123,11 @@ model FollowUpIntent {
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 
-  intent         Intent @relation("FollowUpIntent_Intent", fields: [intentId], references: [id], onDelete: Cascade)
-  followUpIntent Intent @relation("FollowUpIntent_FollowUpIntent", fields: [followUpIntentId], references: [id], onDelete: Cascade)
+  // SQL Server forbids multiple cascade paths into the same table; delete
+  // follow-up rows in application code (or rely on Intent cascade only via
+  // one side). NoAction avoids the Category→Intent→FollowUpIntent diamond.
+  intent         Intent @relation("FollowUpIntent_Intent", fields: [intentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  followUpIntent Intent @relation("FollowUpIntent_FollowUpIntent", fields: [followUpIntentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([intentId])
   @@index([followUpIntentId])
@@ -153,11 +157,11 @@ model Synonym {
 model Conversation {
   id                 Int      @id @default(autoincrement())
   sessionId          String   @map("session_id")
-  userMessage        String   @map("user_message") @db.Text
-  normalizedMessage  String?  @map("normalized_message") @db.Text
+  userMessage        String   @map("user_message") @db.NVarChar(Max)
+  normalizedMessage  String?  @map("normalized_message") @db.NVarChar(Max)
   intentId           Int?     @map("intent_id")
   confidence         Decimal? @db.Decimal(5, 2)
-  botResponse        String?  @map("bot_response") @db.LongText
+  botResponse        String?  @map("bot_response") @db.NVarChar(Max)
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
@@ -169,7 +173,7 @@ model Conversation {
 
 model UnmatchedQuestion {
   id        Int      @id @default(autoincrement())
-  question  String   @db.Text
+  question  String   @db.NVarChar(Max)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -183,7 +187,7 @@ model UnmatchedQuestion {
 model Setting {
   id        Int      @id @default(autoincrement())
   key       String   @unique
-  value     String?  @db.Text
+  value     String?  @db.NVarChar(Max)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

@@ -57,6 +57,25 @@ export const PATCH = withAdminAuth(async (request: NextRequest, context) => {
 
 export const DELETE = withAdminAuth(async (_request: NextRequest, context) => {
   const { id } = await context.params;
-  const category = await prisma.category.delete({ where: { id: Number(id) } });
+  const categoryId = Number(id);
+
+  // Clear follow-up join rows for intents in this category before cascade
+  // delete (SQL Server FollowUpIntent FKs are NoAction).
+  const category = await prisma.$transaction(async (tx) => {
+    const intentIds = (
+      await tx.intent.findMany({ where: { categoryId }, select: { id: true } })
+    ).map((intent) => intent.id);
+
+    if (intentIds.length > 0) {
+      await tx.followUpIntent.deleteMany({
+        where: {
+          OR: [{ intentId: { in: intentIds } }, { followUpIntentId: { in: intentIds } }],
+        },
+      });
+    }
+
+    return tx.category.delete({ where: { id: categoryId } });
+  });
+
   return NextResponse.json(category);
 });

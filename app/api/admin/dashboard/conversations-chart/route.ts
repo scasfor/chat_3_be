@@ -9,12 +9,12 @@ export const GET = withAdminAuth(async () => {
   const start = new Date(startOfToday);
   start.setDate(start.getDate() - 29);
 
-  const rows = await prisma.$queryRaw<{ date: Date; count: bigint }[]>`
-    SELECT DATE(created_at) as date, COUNT(*) as count
+  const rows = await prisma.$queryRaw<{ date: Date; count: number | bigint }[]>`
+    SELECT CAST(created_at AS DATE) AS [date], COUNT(*) AS [count]
     FROM conversations
     WHERE created_at >= ${start}
-    GROUP BY DATE(created_at)
-    ORDER BY date ASC
+    GROUP BY CAST(created_at AS DATE)
+    ORDER BY [date] ASC
   `;
 
   const counts = new Map<string, number>();

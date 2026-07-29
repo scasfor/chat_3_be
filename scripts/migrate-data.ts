@@ -1,11 +1,11 @@
 /**
  * One-off migration of data from the legacy Laravel/MySQL database into the
- * new Prisma-managed MySQL schema. Run with `npm run migrate:legacy-data`
+ * new Prisma-managed SQL Server schema. Run with `npm run migrate:legacy-data`
  * after applying Prisma migrations (`npm run db:migrate:deploy`) against an
  * EMPTY target database.
  *
  * Source connection is configured via LEGACY_DB_* env vars (see .env.example).
- * Target connection is the regular DATABASE_URL used by Prisma.
+ * Target connection is the regular DATABASE_URL used by Prisma (SQL Server).
  *
  * NOTE: the legacy `settings.value` column is encrypted with Laravel's APP_KEY
  * cipher, which this app cannot decrypt. The `settings` table is intentionally
@@ -57,9 +57,10 @@ async function main() {
   }
 }
 
-async function fixAutoIncrement(table: string, maxId: number): Promise<void> {
+async function fixIdentity(table: string, maxId: number): Promise<void> {
   if (maxId <= 0) return;
-  await prisma.$executeRawUnsafe(`ALTER TABLE \`${table}\` AUTO_INCREMENT = ${maxId + 1}`);
+  // RESEED to maxId so the next insert gets maxId + 1.
+  await prisma.$executeRawUnsafe(`DBCC CHECKIDENT ('${table}', RESEED, ${maxId});`);
 }
 
 async function migrateUsers(conn: Connection): Promise<void> {
@@ -79,7 +80,7 @@ async function migrateUsers(conn: Connection): Promise<void> {
       },
     });
   }
-  await fixAutoIncrement("users", Math.max(0, ...rows.map((r) => Number(r.id))));
+  await fixIdentity("users", Math.max(0, ...rows.map((r) => Number(r.id))));
   console.log(`Migrated ${rows.length} users.`);
 }
 
@@ -97,7 +98,7 @@ async function migrateCategories(conn: Connection): Promise<void> {
       },
     });
   }
-  await fixAutoIncrement("categories", Math.max(0, ...rows.map((r) => Number(r.id))));
+  await fixIdentity("categories", Math.max(0, ...rows.map((r) => Number(r.id))));
   console.log(`Migrated ${rows.length} categories.`);
 }
 
@@ -114,7 +115,7 @@ async function migrateCategoryTopics(conn: Connection): Promise<void> {
       },
     });
   }
-  await fixAutoIncrement("category_topics", Math.max(0, ...rows.map((r) => Number(r.id))));
+  await fixIdentity("category_topics", Math.max(0, ...rows.map((r) => Number(r.id))));
   console.log(`Migrated ${rows.length} category topics.`);
 }
 
@@ -139,7 +140,7 @@ async function migrateIntents(conn: Connection): Promise<void> {
       },
     });
   }
-  await fixAutoIncrement("intents", Math.max(0, ...rows.map((r) => Number(r.id))));
+  await fixIdentity("intents", Math.max(0, ...rows.map((r) => Number(r.id))));
   console.log(`Migrated ${rows.length} intents.`);
 }
 
@@ -157,7 +158,7 @@ async function migrateIntentPhrases(conn: Connection): Promise<void> {
       },
     });
   }
-  await fixAutoIncrement("intent_phrases", Math.max(0, ...rows.map((r) => Number(r.id))));
+  await fixIdentity("intent_phrases", Math.max(0, ...rows.map((r) => Number(r.id))));
   console.log(`Migrated ${rows.length} intent phrases.`);
 }
 
@@ -175,7 +176,7 @@ async function migrateIntentKeywords(conn: Connection): Promise<void> {
       },
     });
   }
-  await fixAutoIncrement("intent_keywords", Math.max(0, ...rows.map((r) => Number(r.id))));
+  await fixIdentity("intent_keywords", Math.max(0, ...rows.map((r) => Number(r.id))));
   console.log(`Migrated ${rows.length} intent keywords.`);
 }
 
@@ -192,7 +193,7 @@ async function migrateFollowUpIntents(conn: Connection): Promise<void> {
       },
     });
   }
-  await fixAutoIncrement("follow_up_intents", Math.max(0, ...rows.map((r) => Number(r.id))));
+  await fixIdentity("follow_up_intents", Math.max(0, ...rows.map((r) => Number(r.id))));
   console.log(`Migrated ${rows.length} follow-up intent links.`);
 }
 
@@ -209,7 +210,7 @@ async function migrateSynonyms(conn: Connection): Promise<void> {
       },
     });
   }
-  await fixAutoIncrement("synonyms", Math.max(0, ...rows.map((r) => Number(r.id))));
+  await fixIdentity("synonyms", Math.max(0, ...rows.map((r) => Number(r.id))));
   console.log(`Migrated ${rows.length} synonyms.`);
 }
 
@@ -230,7 +231,7 @@ async function migrateConversations(conn: Connection): Promise<void> {
       },
     });
   }
-  await fixAutoIncrement("conversations", Math.max(0, ...rows.map((r) => Number(r.id))));
+  await fixIdentity("conversations", Math.max(0, ...rows.map((r) => Number(r.id))));
   console.log(`Migrated ${rows.length} conversations.`);
 }
 
@@ -246,7 +247,7 @@ async function migrateUnmatchedQuestions(conn: Connection): Promise<void> {
       },
     });
   }
-  await fixAutoIncrement("unmatched_questions", Math.max(0, ...rows.map((r) => Number(r.id))));
+  await fixIdentity("unmatched_questions", Math.max(0, ...rows.map((r) => Number(r.id))));
   console.log(`Migrated ${rows.length} unmatched questions.`);
 }
 
